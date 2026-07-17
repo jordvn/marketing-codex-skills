@@ -1,0 +1,4 @@
+interface:
+  display_name: "Web Analytics Health Check"
+  short_description: "Find analytics tracking and data issues."
+  default_prompt: "Use $web-analytics-health-check to review these web marketing analytics exports for tracking issues, data-quality red flags, suspicious changes, and practical follow-up checks."
