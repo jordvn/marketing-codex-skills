@@ -1,0 +1,4 @@
+interface:
+  display_name: "Marketing Action Brief"
+  short_description: "Turn marketing findings into next steps."
+  default_prompt: "Use $marketing-action-brief to turn these marketing findings into an executive brief, action plan, or presentation outline."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "CRO Landing Page Review"
+  short_description: "Audit landing pages for conversion lift."
+  default_prompt: "Use $cro-landing-page-review to review this landing page, form, or funnel for conversion friction and prioritized experiments."

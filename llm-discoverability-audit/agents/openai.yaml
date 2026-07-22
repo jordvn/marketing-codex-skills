@@ -1,0 +1,4 @@
+interface:
+  display_name: "LLM Discoverability Audit"
+  short_description: "Improve AI search and citation readiness."
+  default_prompt: "Use $llm-discoverability-audit to assess this company, product, or topic for AI search visibility, citation gaps, and content next steps."

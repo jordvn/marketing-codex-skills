@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEO/AEO Opportunity Audit"
+  short_description: "Find SEO and answer-engine growth opportunities."
+  default_prompt: "Use $seo-aeo-opportunity-audit to review these pages, queries, or search exports for SEO, AEO/GEO opportunities and an actionable content plan."
