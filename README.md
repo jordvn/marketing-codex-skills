@@ -43,5 +43,3 @@ Use $marketing-action-brief to turn these marketing findings into a concise exec
 - Clear confidence labels when data is incomplete or source quality is uncertain.
 - B2B SaaS judgment: lead quality, pipeline context, buying journeys, attribution limits, and stakeholder-ready communication.
 - AI-era discoverability: answer engines, generative engine optimization, entity clarity, citation readiness, and content that can be understood by both people and models.
-
-Keywords: SEO, AEO, GEO, CRO, GA4, Search Console, LLM discoverability, B2B SaaS, web analytics, content strategy, attribution, conversion optimization, AI search, marketing operations.
