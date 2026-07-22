@@ -4,12 +4,6 @@ AI-ready web marketing skills for finding growth signals, diagnosing measurement
 
 SignalForge is a Codex skill suite for modern web marketing work across SEO, AEO/GEO, CRO, analytics quality, attribution, and LLM discoverability. It is built to produce practical deliverables: audits, executive summaries, prioritized next steps, presentation outlines, experiment backlogs, and decision-ready briefs.
 
-For hiring managers, this repository is a working sample of how Jordan King approaches web growth: clarify the business question, test the data before trusting it, connect marketing signals to pipeline quality, and turn fuzzy findings into actions a team can run with.
-
-Suggested GitHub description:
-
-`SignalForge: Codex skills for SEO, AEO/GEO, CRO, analytics QA, attribution, and LLM discoverability workflows.`
-
 ## Skill Catalog
 
 | Skill | Use It For | Common Inputs | Typical Deliverables |
