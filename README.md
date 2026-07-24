@@ -14,6 +14,12 @@ SignalForge is a Codex skill suite for modern web marketing work across SEO, AEO
 | `llm-discoverability-audit` | Assess whether a company, product, or topic can be understood and cited by AI systems. | Website pages, messaging docs, comparison pages, reviews, analyst notes, citation/source lists, AI answer examples. | Entity coverage audit, citation gap analysis, content recommendations, FAQ/comparison/proof-point plan. |
 | `marketing-action-brief` | Convert messy findings into stakeholder-ready next steps. | Audit notes, analytics findings, research summaries, experiment ideas, meeting notes. | Executive brief, 30/60/90-day plan, presentation outline, owner/action matrix, decision memo. |
 
+## Using These Skills In Codex
+
+The skills live in `.agents/skills`, which is the repo-scoped discovery location Codex scans when you open a task from this repository. Start a new Codex task in this repo, then type `$` in the prompt or open **Skills** in the sidebar to confirm they are available.
+
+To make the same skills available across all local Codex projects, copy or symlink the folders under `.agents/skills` into your personal skills directory at `$HOME/.agents/skills`.
+
 ## Example Prompts
 
 ```text
