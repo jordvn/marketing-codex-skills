@@ -1,0 +1,4 @@
+interface:
+  display_name: "Website Performance Report"
+  short_description: "Build decision-ready website performance decks."
+  default_prompt: "Use $website-performance-report to create a shareable slide deck on website performance for the requested time period."
