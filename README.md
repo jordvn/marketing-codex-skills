@@ -47,27 +47,54 @@ Use $marketing-action-brief to turn these marketing findings into a concise exec
 Use $website-performance-report with GA4 to create a website-performance slide deck for the last 90 days, compared with the preceding 90 days. Include traffic, acquisition, conversion, landing-page insights, data caveats, and next actions.
 ```
 
-## GA4 MCP
+## Marketing Analytics MCP
 
-`ga4-mcp` is a local, read-only MCP server that gives Codex access to the Google Analytics Data API through a single tool: `run_ga4_report`. It accepts a date range, 1–5 GA4 dimensions, 1–10 GA4 metrics, and an optional row limit (default 100; maximum 1,000).
+`ga4-mcp` is a local, read-only MCP server that gives Codex access to Google Analytics 4 and Google Search Console. It currently exposes two tools:
+
+| Tool | Source | Use it for |
+| --- | --- | --- |
+| `run_ga4_report` | Google Analytics Data API | Traffic acquisition, landing pages, events, key events, devices, channels, and period comparisons. |
+| `run_gsc_search_analytics` | Google Search Console API | Queries, pages, countries, devices, dates, clicks, impressions, CTR, and average position. |
+
+The MCP server is intended to fetch source-backed marketing data first, then hand the analytical work to the appropriate SignalForge skill.
 
 ### Set up the server
 
-1. Enable the Google Analytics Data API for the Google Cloud project used for authentication.
+1. Enable the Google Analytics Data API and Google Search Console API for the Google Cloud project used for authentication.
 2. Give the Google identity used by the server read access to the target GA4 property.
-3. Configure Google Application Default Credentials in the environment that starts the server. The server creates `BetaAnalyticsDataClient` without explicit credentials, so it uses the standard Google authentication chain.
-4. Set `GA4_PROPERTY_ID` to the numeric GA4 property ID. Do not commit credentials or property secrets to the repository.
-5. Install and run the server from its directory:
+3. Add the same Google identity as a user on the Search Console property.
+4. Configure Google Application Default Credentials in the environment that starts the server. The server creates `BetaAnalyticsDataClient` without explicit credentials, so it uses the standard Google authentication chain.
+5. Set `GA4_PROPERTY_ID` to the numeric GA4 property ID.
+6. Set `GSC_SITE_URL` to the exact Search Console property, such as `https://example.com/` or `sc-domain:example.com`.
+7. Do not commit credentials, property IDs, or service-account keys to the repository.
+8. Install and run the server from its directory:
 
 ```bash
 cd ga4-mcp
 npm install
-GA4_PROPERTY_ID=123456789 npx tsx src/index.ts
+GA4_PROPERTY_ID=123456789 GSC_SITE_URL=sc-domain:example.com npx tsx src/index.ts
 ```
 
-Register that command as a stdio MCP server in Codex, passing `GA4_PROPERTY_ID` and the Google authentication environment to the server process. Once connected, Codex can call `run_ga4_report` directly; no GA4 credentials should be placed in prompts or skill files.
+Register that command as a stdio MCP server in Codex, passing `GA4_PROPERTY_ID`, `GSC_SITE_URL`, and the Google authentication environment to the server process. Once connected, Codex can call the GA4 and Search Console tools directly; no Google credentials should be placed in prompts or skill files.
 
-### Query pattern
+Example Codex MCP config:
+
+```toml
+[mcp_servers.ga4]
+enabled = true
+command = "npx"
+args = ["tsx", "/Users/jordan/Documents/marketing-codex-skills/ga4-mcp/src/index.ts"]
+env = {
+  GA4_PROPERTY_ID = "123456789",
+  GSC_SITE_URL = "sc-domain:findyourbeacon.app",
+  GOOGLE_APPLICATION_CREDENTIALS = "/absolute/path/to/service-account.json"
+}
+tool_timeout_sec = 60
+```
+
+See [`ga4-mcp/README.md`](ga4-mcp/README.md) for the subproject setup notes and local validation commands.
+
+### GA4 query pattern
 
 Always specify at least one dimension. Use a time dimension such as `date`, `yearWeek`, or `yearMonth` for totals and trends, then query the same period by a diagnostic dimension such as `sessionDefaultChannelGroup`, `landingPagePlusQueryString`, `deviceCategory`, or `eventName`.
 
@@ -85,19 +112,39 @@ Example report call shape:
 }
 ```
 
-### Use GA4 with the skills
+### Search Console query pattern
+
+Use Search Console for organic search questions that GA4 cannot answer cleanly, especially query quality. For homepage query analysis, filter `page` to the exact homepage URL and compare equivalent periods by `query`.
+
+Useful dimensions include `query`, `page`, `country`, `device`, and `date`. Core metrics returned by the API are `clicks`, `impressions`, `ctr`, and `position`.
+
+Example report call shape:
+
+```json
+{
+  "siteUrl": "sc-domain:findyourbeacon.app",
+  "startDate": "2026-07-01",
+  "endDate": "2026-07-28",
+  "dimensions": ["query"],
+  "pageFilter": "https://www.findyourbeacon.app/",
+  "rowLimit": 1000
+}
+```
+
+### Use MCP data with the skills
 
 Use the MCP to retrieve data, then assign the analytical job to the appropriate skill:
 
 | Goal | Recommended workflow |
 | --- | --- |
-| Check whether GA4 can support a decision | Query totals, trends, channels, landing pages, devices, and events with GA4 MCP → use `$web-analytics-health-check` to assess tracking, attribution, completeness, and anomalous movement. |
-| Explain a traffic or conversion change | Pull the affected period and a comparable prior period by `date`, channel, landing page, device, and event → use `$web-analytics-health-check` before drawing conclusions. |
-| Produce an executive report | Pull comparable period totals and key segments with GA4 MCP → use `$website-performance-report` to create an editable deck. It should state the period, comparison, sources, caveats, drivers, and actions. |
+| Check whether web analytics can support a decision | Query totals, trends, channels, landing pages, devices, events, and Search Console queries → use `$web-analytics-health-check` to assess tracking, attribution, completeness, and anomalous movement. |
+| Explain a traffic or conversion change | Pull the affected period and a comparable prior period by `date`, channel, landing page, device, event, Search Console query, and Search Console page → use `$web-analytics-health-check` before drawing conclusions. |
+| Produce an executive report | Pull comparable period totals and key GA4/GSC segments with MCP → use `$website-performance-report` to create an editable deck. It should state the period, comparison, sources, caveats, drivers, and actions. |
 | Turn findings into an operating plan | Complete the health check or performance report → use `$marketing-action-brief` to create owners, timing, decisions, and a 30/60/90-day plan. |
 | Improve a high-traffic landing page | Identify high-volume, low-engagement, or low-conversion landing pages with GA4 MCP → use `$cro-landing-page-review` with the page URL, screenshots, and relevant GA4 cut. |
+| Find SEO/AEO opportunities | Pull Search Console query/page data by impressions, clicks, CTR, and position → use `$seo-aeo-opportunity-audit` to prioritize content refreshes, answer blocks, internal links, and schema opportunities. |
 
-For performance reports, compare equivalent date windows, distinguish percentage-point changes from relative changes, label partial days, and never treat `keyEvents` as distinct conversions until event definitions have been verified. When GA4 records multiple key events for one user action, report the event-definition issue and use the cleanest available primary conversion proxy.
+For performance reports, compare equivalent date windows, distinguish percentage-point changes from relative changes, label partial days, and never treat `keyEvents` as distinct conversions until event definitions have been verified. When GA4 records multiple key events for one user action, report the event-definition issue and use the cleanest available primary conversion proxy. For SEO analysis, use Search Console queries as the source of truth for organic query quality; GA4 organic traffic reports do not include Google search queries.
 
 ## What SignalForge Optimizes For
 

@@ -1,0 +1,6 @@
+node_modules/
+*.log
+
+# Google service account keys are credentials. Keep them outside the repo when possible.
+*service-account*.json
+*.credentials.json
