@@ -1,0 +1,9 @@
+.DS_Store
+
+# Generated report/export artifacts should be written outside the repo.
+.tmp/
+reports/
+exports/
+website-performance-report-*/
+*.pptx
+*.pptx.inspect.ndjson

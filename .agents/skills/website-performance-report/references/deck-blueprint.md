@@ -2,6 +2,8 @@
 
 Adapt this sequence to the audience and evidence. Omit empty sections; do not add slides merely to fill the sequence.
 
+Generated deck files, slide renders, inspection dumps, and temporary build assets should live in the non-repo output folder chosen from `SKILL.md`. Keep this repository reserved for reusable skill source, templates, references, and project code unless the user explicitly asks to save an export here.
+
 | Slide | Decision question | Recommended evidence |
 | --- | --- | --- |
 | Title and context | What is being reported? | Reporting/comparison periods, scope, sources, audience. |
