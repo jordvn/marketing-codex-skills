@@ -1,0 +1,4 @@
+interface:
+  display_name: "PageSpeed Insights Audit"
+  short_description: "Audit site speed and Core Web Vitals."
+  default_prompt: "Use $pagespeed-insights-audit to test these URLs with Google PageSpeed Insights and prioritize the highest-impact fixes."

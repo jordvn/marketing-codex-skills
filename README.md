@@ -12,6 +12,7 @@ SignalForge is a Codex skill suite for modern web marketing work across SEO, AEO
 | `website-performance-report` | Create a shareable, executive-ready slide deck that explains website performance over a reporting period. | GA4, Search Console, CRM, marketing automation, ad platforms, dashboards, CSV/XLSX exports. | Editable PowerPoint or native Google Slides deck with KPI story, drivers, caveats, and actions. |
 | `seo-aeo-opportunity-audit` | Find SEO, AEO, and GEO growth opportunities. | Search Console exports, query/page tables, SERP notes, page copy, content inventories. | Opportunity report, content refresh plan, query/page map, answer-block recommendations, schema and internal-link next steps. |
 | `cro-landing-page-review` | Improve B2B SaaS landing pages and conversion paths. | URLs, screenshots, page copy, form flows, analytics summaries, heatmap notes, funnel exports. | CRO audit, friction findings, experiment backlog, page-level recommendations, before/after messaging ideas. |
+| `pagespeed-insights-audit` | Diagnose page speed, Core Web Vitals, Lighthouse, accessibility, and technical page-experience issues. | Public URLs, PageSpeed requests, mobile/desktop requirements, representative site templates. | PageSpeed scorecard, prioritized findings, implementation plan, and verification plan. |
 | `llm-discoverability-audit` | Assess whether a company, product, or topic can be understood and cited by AI systems. | Website pages, messaging docs, comparison pages, reviews, analyst notes, citation/source lists, AI answer examples. | Entity coverage audit, citation gap analysis, content recommendations, FAQ/comparison/proof-point plan. |
 | `marketing-action-brief` | Convert messy findings into stakeholder-ready next steps. | Audit notes, analytics findings, research summaries, experiment ideas, meeting notes. | Executive brief, 30/60/90-day plan, presentation outline, owner/action matrix, decision memo. |
 
@@ -36,6 +37,10 @@ Use $cro-landing-page-review to review this landing page screenshot and form flo
 ```
 
 ```text
+Use $pagespeed-insights-audit to test these landing-page URLs on mobile and desktop, diagnose the main performance constraints, and return a prioritized implementation and verification plan.
+```
+
+```text
 Use $llm-discoverability-audit to assess our product category visibility in AI answers. Identify entity gaps, citation gaps, and content next steps.
 ```
 
@@ -49,12 +54,13 @@ Use $website-performance-report with GA4 to create a website-performance slide d
 
 ## Marketing Analytics MCP
 
-`ga4-mcp` is a local, read-only MCP server that gives Codex access to Google Analytics 4 and Google Search Console. It currently exposes two tools:
+`ga4-mcp` is a local, read-only MCP server that gives Codex access to Google Analytics 4, Google Search Console, and Google PageSpeed Insights. It currently exposes three tools:
 
 | Tool | Source | Use it for |
 | --- | --- | --- |
 | `run_ga4_report` | Google Analytics Data API | Traffic acquisition, landing pages, events, key events, devices, channels, and period comparisons. |
 | `run_gsc_search_analytics` | Google Search Console API | Queries, pages, countries, devices, dates, clicks, impressions, CTR, and average position. |
+| `run_pagespeed_insights` | Google PageSpeed Insights API v5 | Mobile or desktop Lighthouse scores, lab metrics, available field data, and prioritized audits. |
 
 The MCP server is intended to fetch source-backed marketing data first, then hand the analytical work to the appropriate SignalForge skill.
 
@@ -63,19 +69,20 @@ The MCP server is intended to fetch source-backed marketing data first, then han
 1. Enable the Google Analytics Data API and Google Search Console API for the Google Cloud project used for authentication.
 2. Give the Google identity used by the server read access to the target GA4 property.
 3. Add the same Google identity as a user on the Search Console property.
-4. Configure Google Application Default Credentials in the environment that starts the server. The server creates `BetaAnalyticsDataClient` without explicit credentials, so it uses the standard Google authentication chain.
-5. Set `GA4_PROPERTY_ID` to the numeric GA4 property ID.
-6. Set `GSC_SITE_URL` to the exact Search Console property, such as `https://example.com/` or `sc-domain:example.com`.
-7. Do not commit credentials, property IDs, or service-account keys to the repository.
-8. Install and run the server from its directory:
+4. Enable the PageSpeed Insights API, create an API key under **APIs & Services → Credentials**, restrict the key to the PageSpeed Insights API, and set it as `PAGESPEED_API_KEY`. Although unauthenticated calls may sometimes work, configure a key for reliable automated use because shared quota can return `429` errors.
+5. Configure Google Application Default Credentials in the environment that starts the server. The server creates `BetaAnalyticsDataClient` without explicit credentials, so it uses the standard Google authentication chain.
+6. Set `GA4_PROPERTY_ID` to the numeric GA4 property ID.
+7. Set `GSC_SITE_URL` to the exact Search Console property, such as `https://example.com/` or `sc-domain:example.com`.
+8. Do not commit credentials, property IDs, API keys, or service-account keys to the repository.
+9. Install and run the server from its directory:
 
 ```bash
 cd ga4-mcp
 npm install
-GA4_PROPERTY_ID=123456789 GSC_SITE_URL=sc-domain:example.com npx tsx src/index.ts
+GA4_PROPERTY_ID=123456789 GSC_SITE_URL=sc-domain:example.com PAGESPEED_API_KEY=your-api-key npx tsx src/index.ts
 ```
 
-Register that command as a stdio MCP server in Codex, passing `GA4_PROPERTY_ID`, `GSC_SITE_URL`, and the Google authentication environment to the server process. Once connected, Codex can call the GA4 and Search Console tools directly; no Google credentials should be placed in prompts or skill files.
+Register that command as a stdio MCP server in Codex, passing `GA4_PROPERTY_ID`, `GSC_SITE_URL`, recommended `PAGESPEED_API_KEY`, and the Google authentication environment to the server process. Once connected, Codex can call the GA4, Search Console, and PageSpeed tools directly; no Google credentials should be placed in prompts or skill files.
 
 Example Codex MCP config:
 
@@ -87,9 +94,10 @@ args = ["tsx", "/Users/jordan/Documents/marketing-codex-skills/ga4-mcp/src/index
 env = {
   GA4_PROPERTY_ID = "123456789",
   GSC_SITE_URL = "sc-domain:findyourbeacon.app",
+  PAGESPEED_API_KEY = "your-api-key",
   GOOGLE_APPLICATION_CREDENTIALS = "/absolute/path/to/service-account.json"
 }
-tool_timeout_sec = 60
+tool_timeout_sec = 130
 ```
 
 See [`ga4-mcp/README.md`](ga4-mcp/README.md) for the subproject setup notes and local validation commands.
@@ -111,6 +119,21 @@ Example report call shape:
   "limit": 20
 }
 ```
+
+### PageSpeed query pattern
+
+Run mobile first because it is usually the more constrained experience, then add desktop when the audience or request warrants comparison. Use representative templates rather than assuming the homepage represents the whole site. The tool returns compact category scores, lab metrics, available page- and origin-level field data, and prioritized audits.
+
+```json
+{
+  "url": "https://example.com/landing-page",
+  "strategy": "mobile",
+  "categories": ["performance", "accessibility", "best-practices", "seo"],
+  "auditLimit": 15
+}
+```
+
+Treat one run as a dated synthetic snapshot. Field data may be absent, and Google has announced that CrUX real-user data will be removed from the PageSpeed Insights API; use the dedicated CrUX APIs when durable field-data history is required.
 
 ### Search Console query pattern
 
@@ -143,6 +166,7 @@ Use the MCP to retrieve data, then assign the analytical job to the appropriate 
 | Turn findings into an operating plan | Complete the health check or performance report → use `$marketing-action-brief` to create owners, timing, decisions, and a 30/60/90-day plan. |
 | Improve a high-traffic landing page | Identify high-volume, low-engagement, or low-conversion landing pages with GA4 MCP → use `$cro-landing-page-review` with the page URL, screenshots, and relevant GA4 cut. |
 | Find SEO/AEO opportunities | Pull Search Console query/page data by impressions, clicks, CTR, and position → use `$seo-aeo-opportunity-audit` to prioritize content refreshes, answer blocks, internal links, and schema opportunities. |
+| Diagnose technical page experience | Run PageSpeed for representative URLs on mobile and, when relevant, desktop → use `$pagespeed-insights-audit` to separate field and lab evidence, group root causes, and prioritize fixes. |
 
 For performance reports, compare equivalent date windows, distinguish percentage-point changes from relative changes, label partial days, and never treat `keyEvents` as distinct conversions until event definitions have been verified. When GA4 records multiple key events for one user action, report the event-definition issue and use the cleanest available primary conversion proxy. For SEO analysis, use Search Console queries as the source of truth for organic query quality; GA4 organic traffic reports do not include Google search queries.
 

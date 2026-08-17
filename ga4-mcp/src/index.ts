@@ -6,6 +6,7 @@ import * as z from "zod/v4";
 
 const propertyId = process.env.GA4_PROPERTY_ID;
 const defaultSearchConsoleSiteUrl = process.env.GSC_SITE_URL;
+const pageSpeedApiKey = process.env.PAGESPEED_API_KEY;
 
 const analytics = new BetaAnalyticsDataClient();
 const searchConsoleAuth = new GoogleAuth({
@@ -23,6 +24,75 @@ type SearchConsoleRow = {
 type SearchConsoleResponse = {
   rows?: SearchConsoleRow[];
 };
+
+type PageSpeedMetric = {
+  percentile?: number;
+  category?: string;
+};
+
+type PageSpeedExperience = {
+  id?: string;
+  overall_category?: string;
+  origin_fallback?: boolean;
+  metrics?: Record<string, PageSpeedMetric>;
+};
+
+type LighthouseAudit = {
+  id?: string;
+  title?: string;
+  score?: number | null;
+  scoreDisplayMode?: string;
+  numericValue?: number;
+  numericUnit?: string;
+  displayValue?: string;
+  details?: {
+    type?: string;
+    overallSavingsMs?: number;
+    overallSavingsBytes?: number;
+  };
+};
+
+type PageSpeedResponse = {
+  id?: string;
+  loadingExperience?: PageSpeedExperience;
+  originLoadingExperience?: PageSpeedExperience;
+  lighthouseResult?: {
+    requestedUrl?: string;
+    finalUrl?: string;
+    fetchTime?: string;
+    lighthouseVersion?: string;
+    categories?: Record<string, { title?: string; score?: number | null }>;
+    audits?: Record<string, LighthouseAudit>;
+  };
+};
+
+const labMetricIds = [
+  "first-contentful-paint",
+  "largest-contentful-paint",
+  "total-blocking-time",
+  "cumulative-layout-shift",
+  "speed-index",
+  "interactive",
+];
+
+function summarizeExperience(experience?: PageSpeedExperience) {
+  if (!experience) return null;
+
+  return {
+    id: experience.id ?? null,
+    overallCategory: experience.overall_category ?? null,
+    originFallback: experience.origin_fallback ?? false,
+    metrics: Object.fromEntries(
+      Object.entries(experience.metrics ?? {}).map(([name, metric]) => [
+        name,
+        {
+          percentile: metric.percentile ?? null,
+          category: metric.category ?? null,
+        },
+      ])
+    ),
+  };
+}
 
 serveStdio(() => {
   const server = new McpServer({
@@ -175,6 +245,120 @@ serveStdio(() => {
       return {
         content: [{ type: "text", text: JSON.stringify(rows, null, 2) }],
         structuredContent: { rows },
+      };
+    }
+  );
+
+  server.registerTool(
+    "run_pagespeed_insights",
+    {
+      description:
+        "Run a read-only Google PageSpeed Insights API v5 analysis and return compact Lighthouse scores, lab metrics, available field data, and prioritized audits.",
+      inputSchema: z.object({
+        url: z.string().url().describe("Public HTTP or HTTPS page URL to analyze."),
+        strategy: z.enum(["mobile", "desktop"]).default("mobile"),
+        categories: z
+          .array(z.enum(["performance", "accessibility", "best-practices", "seo"]))
+          .min(1)
+          .max(4)
+          .default(["performance", "accessibility", "best-practices", "seo"]),
+        locale: z.string().min(2).max(12).default("en"),
+        auditLimit: z.number().int().min(1).max(50).default(15),
+      }),
+    },
+    async ({ url, strategy, categories, locale, auditLimit }) => {
+      const targetUrl = new URL(url);
+      if (!["http:", "https:"].includes(targetUrl.protocol)) {
+        throw new Error("PageSpeed Insights requires an HTTP or HTTPS URL");
+      }
+
+      const endpoint = new URL("https://www.googleapis.com/pagespeedonline/v5/runPagespeed");
+      endpoint.searchParams.set("url", targetUrl.toString());
+      endpoint.searchParams.set("strategy", strategy);
+      endpoint.searchParams.set("locale", locale);
+      categories.forEach((category) => endpoint.searchParams.append("category", category));
+      if (pageSpeedApiKey) endpoint.searchParams.set("key", pageSpeedApiKey);
+
+      const response = await fetch(endpoint, { signal: AbortSignal.timeout(120_000) });
+      if (!response.ok) {
+        const errorBody = (await response.text()).slice(0, 2_000);
+        if (response.status === 429 && !pageSpeedApiKey) {
+          throw new Error(
+            "PageSpeed Insights API quota was exceeded for an unauthenticated request. Set PAGESPEED_API_KEY for repeatable use."
+          );
+        }
+        throw new Error(`PageSpeed Insights API returned ${response.status}: ${errorBody}`);
+      }
+
+      const data = (await response.json()) as PageSpeedResponse;
+      const lighthouse = data.lighthouseResult;
+      const audits = lighthouse?.audits ?? {};
+
+      const categoryScores = Object.fromEntries(
+        Object.entries(lighthouse?.categories ?? {}).map(([id, category]) => [
+          id,
+          {
+            title: category.title ?? id,
+            score: category.score == null ? null : Math.round(category.score * 100),
+          },
+        ])
+      );
+
+      const labMetrics = Object.fromEntries(
+        labMetricIds.flatMap((id) => {
+          const audit = audits[id];
+          if (!audit) return [];
+          return [
+            [
+              id,
+              {
+                title: audit.title ?? id,
+                value: audit.numericValue ?? null,
+                unit: audit.numericUnit ?? null,
+                displayValue: audit.displayValue ?? null,
+                score: audit.score == null ? null : Math.round(audit.score * 100),
+              },
+            ],
+          ];
+        })
+      );
+
+      const prioritizedAudits = Object.entries(audits)
+        .filter(([, audit]) => audit.title && audit.score != null && audit.score < 0.9)
+        .sort(([, a], [, b]) => {
+          const savingsMs = (b.details?.overallSavingsMs ?? 0) - (a.details?.overallSavingsMs ?? 0);
+          if (savingsMs !== 0) return savingsMs;
+          const savingsBytes =
+            (b.details?.overallSavingsBytes ?? 0) - (a.details?.overallSavingsBytes ?? 0);
+          if (savingsBytes !== 0) return savingsBytes;
+          return (a.score ?? 1) - (b.score ?? 1);
+        })
+        .slice(0, auditLimit)
+        .map(([id, audit]) => ({
+          id,
+          title: audit.title ?? id,
+          score: audit.score == null ? null : Math.round(audit.score * 100),
+          displayValue: audit.displayValue ?? null,
+          savingsMs: audit.details?.overallSavingsMs ?? null,
+          savingsBytes: audit.details?.overallSavingsBytes ?? null,
+        }));
+
+      const result = {
+        requestedUrl: lighthouse?.requestedUrl ?? url,
+        finalUrl: lighthouse?.finalUrl ?? data.id ?? url,
+        fetchTime: lighthouse?.fetchTime ?? null,
+        strategy,
+        lighthouseVersion: lighthouse?.lighthouseVersion ?? null,
+        categories: categoryScores,
+        labMetrics,
+        pageFieldData: summarizeExperience(data.loadingExperience),
+        originFieldData: summarizeExperience(data.originLoadingExperience),
+        prioritizedAudits,
+      };
+
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        structuredContent: result,
       };
     }
   );

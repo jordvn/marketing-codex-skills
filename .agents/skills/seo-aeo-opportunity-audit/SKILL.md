@@ -14,12 +14,13 @@ Use this skill to turn organic search, content, and SERP evidence into a priorit
 1. Identify the business goal, target audience, product/category context, reporting period, comparison period, and source data.
 2. Inventory available evidence: queries, pages, impressions, clicks, CTR, position, conversions, content sections, SERP features, competitors, schema, and internal links.
 3. Read `references/opportunity-patterns.md` before evaluating opportunities.
-4. Classify findings into:
+4. Invoke `$pagespeed-insights-audit` when the user asks for technical performance or Core Web Vitals, or when a public URL is available and page experience is a plausible technical blocker. Keep performance evidence separate from crawlability, indexation, content fit, and ranking evidence.
+5. Classify findings into:
    - **SEO performance**: ranking, CTR, indexation, content fit, internal links, technical blockers.
    - **AEO/GEO readiness**: concise answers, entity clarity, citations, proof, comparisons, FAQs, schema, topical coverage.
    - **Conversion relevance**: whether organic demand reaches a useful next step.
-5. Prioritize by business impact, search demand, effort, confidence, and expected path to qualified pipeline.
-6. End with a short action plan that names exact pages, queries, sections, owners, and next checks whenever the inputs allow it.
+6. Prioritize by business impact, search demand, effort, confidence, and expected path to qualified pipeline.
+7. End with a short action plan that names exact pages, queries, sections, owners, and next checks whenever the inputs allow it.
 
 ## Output Format
 

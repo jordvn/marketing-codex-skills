@@ -14,14 +14,15 @@ Use this skill to identify conversion friction and turn it into practical page c
 1. Identify the audience, offer, traffic source, page goal, conversion event, and funnel step.
 2. Inventory available evidence: URL, screenshot, copy, analytics, device split, heatmap notes, form fields, CRM quality, and prior tests.
 3. Read `references/conversion-friction.md` before evaluating the page.
-4. Review the page across:
+4. Invoke `$pagespeed-insights-audit` when the user asks about speed or Core Web Vitals, when a public URL is available and performance is a plausible conversion constraint, or when mobile performance needs objective evidence. Do not infer runtime performance from screenshots alone.
+5. Review the page across:
    - **Message match**: source intent, headline, offer, audience, and promise.
    - **Clarity**: what it is, who it is for, why it matters, and what happens next.
    - **Proof**: credibility, specificity, customer evidence, security, pricing, or outcomes.
    - **Friction**: form, CTA, layout, mobile usability, page speed cues, anxiety, and distraction.
    - **Measurement**: event tracking, funnel visibility, sample size, and lead-quality context.
-5. Prioritize recommendations by likely lift, effort, confidence, and risk to lead quality.
-6. Produce either direct page recommendations or an experiment backlog, depending on the user's request and evidence quality.
+6. Prioritize recommendations by likely lift, effort, confidence, and risk to lead quality.
+7. Produce either direct page recommendations or an experiment backlog, depending on the user's request and evidence quality.
 
 ## Output Format
 
